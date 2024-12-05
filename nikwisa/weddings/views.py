@@ -1,95 +1,35 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from .models import WeddingsCategory, WeddingSubCategory, Weddings
-from .serializers import WeddingsCategorySerializer, WeddingSubCategorySerializer, WeddingsSerializer
+from rest_framework import status
+from .models import Wedding
+from .serializers import WeddingSerializer
 
-class WeddingsCategoryViewSet(viewsets.ViewSet):
+class WeddingViewSet(ModelViewSet):
+    queryset = Wedding.objects.all()
+    serializer_class = WeddingSerializer
+
     def list(self, request):
-        queryset = WeddingsCategory.objects.all()
-        serializer = WeddingsCategorySerializer(queryset, many=True)
-        return Response(serializer.data)
+        """Filter weddings by subcategory if provided."""
+        subcategory_id = request.query_params.get("subcategory")
+        if subcategory_id:
+            self.queryset = self.queryset.filter(subcategory_id=subcategory_id)
+        return super().list(request)
 
-    def create(self, request):
-        serializer = WeddingsCategorySerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def partial_update(self, request, pk=None):
+    def retrieve(self, request, pk=None):
+        """Retrieve a specific wedding along with related weddings in the same subcategory."""
         try:
-            category = WeddingsCategory.objects.get(pk=pk)
-        except WeddingsCategory.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = WeddingsCategorySerializer(category, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+            wedding = Wedding.objects.get(pk=pk)
+        except Wedding.DoesNotExist:
+            return Response({"error": "Wedding not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def destroy(self, request, pk=None):
-        try:
-            category = WeddingsCategory.objects.get(pk=pk)
-        except WeddingsCategory.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        category.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = self.get_serializer(wedding)
+        related_weddings = Wedding.objects.filter(subcategory=wedding.subcategory).exclude(id=wedding.id)
+        related_serializer = self.get_serializer(related_weddings, many=True)
 
-class WeddingSubCategoryViewSet(viewsets.ViewSet):
-    def list(self, request):
-        queryset = WeddingSubCategory.objects.all()
-        serializer = WeddingSubCategorySerializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response({
+            "wedding": serializer.data,
+            "related_weddings": related_serializer.data
+        })
 
-    def create(self, request):
-        serializer = WeddingSubCategorySerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def partial_update(self, request, pk=None):
-        try:
-            subcategory = WeddingSubCategory.objects.get(pk=pk)
-        except WeddingSubCategory.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = WeddingSubCategorySerializer(subcategory, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
 
-    def destroy(self, request, pk=None):
-        try:
-            subcategory = WeddingSubCategory.objects.get(pk=pk)
-        except WeddingSubCategory.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        subcategory.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-class WeddingsViewSet(viewsets.ViewSet):
-    def list(self, request):
-        queryset = Weddings.objects.all()
-        serializer = WeddingsSerializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def create(self, request):
-        serializer = WeddingsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def partial_update(self, request, pk=None):
-        try:
-            wedding = Weddings.objects.get(pk=pk)
-        except Weddings.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = WeddingsSerializer(wedding, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-    def destroy(self, request, pk=None):
-        try:
-            wedding = Weddings.objects.get(pk=pk)
-        except Weddings.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        wedding.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,17 +1,9 @@
+# weddings/serializers.py
 from rest_framework import serializers
-from .models import WeddingsCategory, WeddingSubCategory, Weddings
+from .models import Wedding
 
-class WeddingsCategorySerializer(serializers.ModelSerializer):
+class WeddingSerializer(serializers.ModelSerializer):
     class Meta:
-        model = WeddingsCategory
-        fields = '__all__'
+        model = Wedding
+        fields = '__all__'  # Adjust fields if necessary
 
-class WeddingSubCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WeddingSubCategory
-        fields = '__all__'
-
-class WeddingsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Weddings
-        fields = '__all__'
